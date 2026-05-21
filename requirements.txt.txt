@@ -1,0 +1,7 @@
+pandas
+openpyxl
+pydeck
+pyproj
+geopandas
+folium
+streamlit-folium
