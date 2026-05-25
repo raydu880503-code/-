@@ -397,40 +397,35 @@ with main_col_right:
             </div>
         """, unsafe_allow_html=True)
         
-        # 1. 自動從帶有中文的字串（如 取水設施(崩W1) ）中，精準提取出核心純編號 "崩W1"
+        # 1. 取得目前選取設施的「最終實體資料夾名稱」（如 崩W1、崩B1-1、崩1-2）
+        # 自動清掉可能帶有的中文括號（如 分分水箱(崩B1-1) -> 還原為純編號 崩B1-1）
         pure_id = facility_id
         if "(" in facility_id and ")" in facility_id:
             pure_id = facility_id.split("(")[-1].split(")")[0]
         pure_id = pure_id.strip()
 
-        # 2. 🎯 終極修正：依照您定義的三層資料夾結構進行拼接定位
-        # 第一層基本路徑：現勘照片/2026_4~5月/觀音山系/
-        # 第二層溪流路徑：現勘照片/2026_4~5月/觀音山系/崩山坑溪/
+        # 2. 🎯 核心聯動：找出此點位對應的主取水設施（W系列系列名稱）作為系統主目錄
+        # 這樣不論點到 W、B 還是純數字，都能精準鎖定到同一個大「XX系統」資料夾下
+        associated_w = str(target_row['_filter_w_series']).strip()
+        system_folder_name = f"{associated_w}系統"
+        
+        # 3. 三層絕對路徑無痕對接
         basin_dir = os.path.join(PHOTO_BASE_DIR, facility_basin)
-        
-        # 第三層與第四層資料夾拼接：崩山坑溪/崩W1系統/崩W1/
-        system_folder_name = f"{pure_id}系統"
-        exact_facility_folder = pure_id
-        
-        # 最終合成的目標實體資料夾路徑
-        target_folder_path = os.path.join(basin_dir, system_folder_name, exact_facility_folder)
+        target_folder_path = os.path.join(basin_dir, system_folder_name, pure_id)
         
         img_list = []
-        # 3. 🎯 核心檔案打包邏輯：既然都已經精準關進去「崩W1」專屬子資料夾了，裡面所有的照片不管叫什麼名字，全部打包！
+        # 4. 如果專屬路徑存在，無條件打包該設施資料夾下的每一張照片（零命名限制）
         if os.path.exists(target_folder_path) and os.path.isdir(target_folder_path):
             valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
             all_files = []
             for ext in valid_extensions:
-                # 使用遞迴與星號，直接將該資料夾內所有層級、不論名稱的所有相片全部搜出來
                 search_pattern = os.path.join(target_folder_path, "**", f"*.{ext}")
                 all_files.extend(glob.glob(search_pattern, recursive=True))
-            
-            # 零命名過濾限制，通通放行！
             img_list = all_files
             img_list = sorted(list(set(img_list)))
             
         else:
-            # 備用降級安全鎖：如果真的在您的硬碟裡找不到這層資料夾，降級回溪流大資料夾下做傳統前綴匹配搜尋防呆
+            # 備用防呆機制：如果硬碟裡沒有拆分得這麼細，自動回到大資料夾做安全前綴搜尋
             if os.path.exists(basin_dir) and os.path.isdir(basin_dir):
                 valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
                 all_files = []
@@ -586,7 +581,7 @@ with main_col_right:
                 st.components.v1.html(panzoom_html, height=435)
             except Exception as img_err: st.error(f"圖片加載失敗: {img_err}")
         else:
-            st.info(f"💡 在硬碟中找不到該設施的指定目標子資料夾：`/{facility_basin}/{system_folder_name}/{exact_facility_folder}/`")
+            st.info(f"💡 在硬碟中找不到該設施的指定目標子資料夾：`/{facility_basin}/{system_folder_name}/{pure_id}/`")
     else:
         st.markdown(
             "<div style='border: 2px dashed #ccc; padding: 40px; text-align: center; color: #888; border-radius: 10px; margin-top: 20px;'>"
