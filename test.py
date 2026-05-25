@@ -397,38 +397,40 @@ with main_col_right:
             </div>
         """, unsafe_allow_html=True)
         
-        # 1. 自動處理分水鞍、分水箱等括號文字，取得純編號（如 取水設施(崩W1) -> 崩W1）
+        # 1. 自動從帶有中文的字串（如 取水設施(崩W1) ）中，精準提取出核心純編號 "崩W1"
         pure_id = facility_id
         if "(" in facility_id and ")" in facility_id:
             pure_id = facility_id.split("(")[-1].split(")")[0]
         pure_id = pure_id.strip()
 
-        # 2. 精準對準專屬的「XX系統」資料夾路徑
+        # 2. 🎯 終極修正：依照您定義的三層資料夾結構進行拼接定位
+        # 第一層基本路徑：現勘照片/2026_4~5月/觀音山系/
+        # 第二層溪流路徑：現勘照片/2026_4~5月/觀音山系/崩山坑溪/
         basin_dir = os.path.join(PHOTO_BASE_DIR, facility_basin)
+        
+        # 第三層與第四層資料夾拼接：崩山坑溪/崩W1系統/崩W1/
         system_folder_name = f"{pure_id}系統"
-        target_system_dir = os.path.join(basin_dir, system_folder_name)
+        exact_facility_folder = pure_id
+        
+        # 最終合成的目標實體資料夾路徑
+        target_folder_path = os.path.join(basin_dir, system_folder_name, exact_facility_folder)
         
         img_list = []
-        if os.path.exists(target_system_dir) and os.path.isdir(target_system_dir):
+        # 3. 🎯 核心檔案打包邏輯：既然都已經精準關進去「崩W1」專屬子資料夾了，裡面所有的照片不管叫什麼名字，全部打包！
+        if os.path.exists(target_folder_path) and os.path.isdir(target_folder_path):
             valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
             all_files = []
             for ext in valid_extensions:
-                # 使用深度遞迴搜尋，打包系統資料夾底下的相片
-                search_pattern = os.path.join(target_system_dir, "**", f"*.{ext}")
+                # 使用遞迴與星號，直接將該資料夾內所有層級、不論名稱的所有相片全部搜出來
+                search_pattern = os.path.join(target_folder_path, "**", f"*.{ext}")
                 all_files.extend(glob.glob(search_pattern, recursive=True))
             
-            # 在專屬系統資料夾內部重新進行精準比對，確保點選「中W1」時排除「中B1-1」、「中1-1」
-            pure_id_upper = pure_id.upper()
-            for file_path in all_files:
-                file_name = os.path.basename(file_path).upper()
-                if file_name.startswith(pure_id_upper):
-                    remainder = file_name[len(pure_id_upper):]
-                    # 後方不緊接英數，排除如點選中W1時抓到中W11
-                    if remainder == "" or not remainder[0].isalnum():
-                        img_list.append(file_path)
+            # 零命名過濾限制，通通放行！
+            img_list = all_files
             img_list = sorted(list(set(img_list)))
+            
         else:
-            # 備用防呆機制：如果找不到「XX系統」資料夾，回到溪流大資料夾下做傳統前綴搜尋
+            # 備用降級安全鎖：如果真的在您的硬碟裡找不到這層資料夾，降級回溪流大資料夾下做傳統前綴匹配搜尋防呆
             if os.path.exists(basin_dir) and os.path.isdir(basin_dir):
                 valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
                 all_files = []
@@ -584,7 +586,7 @@ with main_col_right:
                 st.components.v1.html(panzoom_html, height=435)
             except Exception as img_err: st.error(f"圖片加載失敗: {img_err}")
         else:
-            st.info(f"💡 在 `{facility_basin}` 的專屬系統資料夾內，查無開頭為 `{pure_id}` 的設施現勘照片。")
+            st.info(f"💡 在硬碟中找不到該設施的指定目標子資料夾：`/{facility_basin}/{system_folder_name}/{exact_facility_folder}/`")
     else:
         st.markdown(
             "<div style='border: 2px dashed #ccc; padding: 40px; text-align: center; color: #888; border-radius: 10px; margin-top: 20px;'>"
