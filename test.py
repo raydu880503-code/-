@@ -29,7 +29,7 @@ def load_data(file_path):
             df_logic[col] = df_logic[col].replace(r'^\s*$', pd.NA, regex=True).ffill()
 
     def process_row(i):
-        if pd.notna(df.loc[i, '分水鞍']) and str(df.loc[i, '分分水鞍']).strip() != "":
+        if pd.notna(df.loc[i, '分水鞍']) and str(df.loc[i, '分水鞍']).strip() != "":
             exact_id = str(df.loc[i, '分水鞍'])
             category_zh = f"分水鞍({exact_id})"
             color = [255, 0, 0, 200]
