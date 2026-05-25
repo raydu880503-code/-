@@ -100,8 +100,8 @@ def load_shp_layer(shp_path, is_basin=False):
 # --- 3. 讀取路徑設定 ---
 FILE_PATH = "109到114年度 五股已完工設施盤點.xlsx"
 PHOTO_BASE_DIR = os.path.join(".", "現勘照片/2026_4~5月")
-SHP_BASIN_PATH = "觀音山系集水區分區.shp"
-SHP_PIPE_PATH = "觀音山系管路.shp"
+SHP_BASIN_PATH = "SHP檔/觀音山系集水區分區.shp"
+SHP_PIPE_PATH = "SHP檔/觀音山系管路.shp"
 
 try:
     df_all = load_data(FILE_PATH)
