@@ -163,7 +163,6 @@ with control_col1:
     map_style_choice = st.radio("選擇底圖樣式：", ["電子通用地圖", "正射影像圖"], horizontal=True)
 with control_col2:
     show_basin_shp = st.checkbox("顯示集水區分區範圍", value=True, help="取消勾選即可隱藏地圖上的集水區顏色圖塊")
-    # 🌟 移至此處：將字體縮小（0.9rem）並調整為深灰色，放置在 Checkbox 的正下方
     st.markdown(
         '<div style="color: #999; font-size: 0.9rem; margin-top: -5px; font-weight: 500;">'
         '💡 提示：點選地圖上設施，下方圖文及相關資訊會對應跳出。'
@@ -303,8 +302,6 @@ for col in table_df.columns:
 
 table_df = table_df.fillna("")
 
-# 🌟 此處原本的大提示文字已經安全移除，版面回歸乾淨乾爽！
-
 st.markdown("""
     <style>
         .stDataFrame div[data-testid="stTable"] td, 
@@ -338,7 +335,6 @@ with main_col_left:
     if st.session_state["last_selected_index"] is not None and st.session_state["last_selected_index"] < len(df_filtered):
         idx = st.session_state["last_selected_index"]
         target_row = df_filtered.iloc[idx]
-        
         
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.markdown("### 📊 內部統計與備註")
@@ -401,18 +397,55 @@ with main_col_right:
             </div>
         """, unsafe_allow_html=True)
         
+        # 🎯 核心修正 1：解析並還原括號文字，取得純編號（如 取水設施(崩W1) -> 崩W1）
+        pure_id = facility_id
+        if "(" in facility_id and ")" in facility_id:
+            pure_id = facility_id.split("(")[-1].split(")")[0]
+        pure_id = pure_id.strip()
+
+        # 🎯 核心修正 2：精準對準專屬的「XX系統」資料夾
         basin_dir = os.path.join(PHOTO_BASE_DIR, facility_basin)
+        system_folder_name = f"{pure_id}系統"
+        target_system_dir = os.path.join(basin_dir, system_folder_name)
+        
         img_list = []
-        if os.path.exists(basin_dir) and os.path.isdir(basin_dir):
+        if os.path.exists(target_system_dir) and os.path.isdir(target_system_dir):
             valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
             all_files = []
             for ext in valid_extensions:
-                search_pattern = os.path.join(basin_dir, "**", f"*.{ext}")
-                all_files.extend(glob.glob(search_pattern, recursive=True))
+                search_pattern = os.path.join(target_system_dir, f"*.{ext}")
+                all_files.extend(glob.glob(search_pattern))
+            
+            # 🎯 核心修正 3：在資料夾內部重新執行精準比對，確保點選「崩W1」只會抓「崩W1...」開頭的圖，排除「崩B1-1」、「崩1-1」
+            pure_id_upper = pure_id.upper()
             for file_path in all_files:
-                if facility_id.upper() in file_path.upper():
-                    img_list.append(file_path)
+                file_name = os.path.basename(file_path).upper()
+                
+                # 照片檔名必須是以純編號（如崩W1）開頭
+                if file_name.startswith(pure_id_upper):
+                    remainder = file_name[len(pure_id_upper):]
+                    # 排除後綴型號干擾，確認緊接著純編號後方不接任何數字或字母（例如點崩W1時排除崩W11）
+                    if remainder == "" or not remainder[0].isalnum():
+                        img_list.append(file_path)
+                        
             img_list = sorted(list(set(img_list)))
+        else:
+            # 備用防呆機制：如果找不到「XX系統」資料夾，才回到原本的舊路徑前綴搜尋
+            if os.path.exists(basin_dir) and os.path.isdir(basin_dir):
+                valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
+                all_files = []
+                for ext in valid_extensions:
+                    search_pattern = os.path.join(basin_dir, "**", f"*.{ext}")
+                    all_files.extend(glob.glob(search_pattern, recursive=True))
+                
+                pure_id_upper = pure_id.upper()
+                for file_path in all_files:
+                    file_name = os.path.basename(file_path).upper()
+                    if file_name.startswith(pure_id_upper):
+                        remainder = file_name[len(pure_id_upper):]
+                        if remainder == "" or not remainder[0].isalnum():
+                            img_list.append(file_path)
+                img_list = sorted(list(set(img_list)))
 
         if "remote_action" not in st.session_state:
             st.session_state["remote_action"] = None
@@ -553,7 +586,7 @@ with main_col_right:
                 st.components.v1.html(panzoom_html, height=435)
             except Exception as img_err: st.error(f"圖片加載失敗: {img_err}")
         else:
-            st.info(f"💡 在 `{facility_basin}` 的各層子資料夾內，目前找不到任何路徑或檔名包含 `{facility_id}` 的照片。")
+            st.info(f"💡 在 `{facility_basin}` 的專屬系統資料夾內，查無開頭為 `{pure_id}` 的設施現勘照片。")
     else:
         st.markdown(
             "<div style='border: 2px dashed #ccc; padding: 40px; text-align: center; color: #888; border-radius: 10px; margin-top: 20px;'>"
