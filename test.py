@@ -12,7 +12,7 @@ import folium
 from streamlit_folium import st_folium
 
 # --- 1. 網頁基本設定 ---
-st.set_page_config(layout="wide", page_title="五股設施維護管理系統")
+st.set_page_config(layout="wide", page_title="五股已完工設施管理系統")
 
 # --- 2. 座標轉換器 (TWD97 -> WGS84) ---
 transformer = Transformer.from_crs("epsg:3826", "epsg:4326", always_xy=True)
