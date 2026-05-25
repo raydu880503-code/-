@@ -397,13 +397,13 @@ with main_col_right:
             </div>
         """, unsafe_allow_html=True)
         
-        # 🎯 核心修正 1：解析並還原括號文字，取得純編號（如 取水設施(崩W1) -> 崩W1）
+        # 1. 解析並還原括號文字，取得純編號（如 取水設施(中W1) -> 中W1）
         pure_id = facility_id
         if "(" in facility_id and ")" in facility_id:
             pure_id = facility_id.split("(")[-1].split(")")[0]
         pure_id = pure_id.strip()
 
-        # 🎯 核心修正 2：精準對準專屬的「XX系統」資料夾
+        # 2. 定位專屬的「XX系統」資料夾路徑
         basin_dir = os.path.join(PHOTO_BASE_DIR, facility_basin)
         system_folder_name = f"{pure_id}系統"
         target_system_dir = os.path.join(basin_dir, system_folder_name)
@@ -413,22 +413,31 @@ with main_col_right:
             valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
             all_files = []
             for ext in valid_extensions:
-                search_pattern = os.path.join(target_system_dir, f"*.{ext}")
-                all_files.extend(glob.glob(search_pattern))
+                # 🎯 核心修正：使用 "**" 進行深度遞迴搜尋，確保系統資料夾底下的任何子資料夾、任何命名的照片都能被抓到
+                search_pattern = os.path.join(target_system_dir, "**", f"*.{ext}")
+                all_files.extend(glob.glob(search_pattern, recursive=True))
             
-            # 🎯 核心修正 3：在資料夾內部重新執行精準比對，確保點選「崩W1」只會抓「崩W1...」開頭的圖，排除「崩B1-1」、「崩1-1」
-            pure_id_upper = pure_id.upper()
-            for file_path in all_files:
-                file_name = os.path.basename(file_path).upper()
-                
-                # 照片檔名必須是以純編號（如崩W1）開頭
-                if file_name.startswith(pure_id_upper):
-                    remainder = file_name[len(pure_id_upper):]
-                    # 排除後綴型號干擾，確認緊接著純編號後方不接任何數字或字母（例如點崩W1時排除崩W11）
-                    if remainder == "" or not remainder[0].isalnum():
-                        img_list.append(file_path)
-                        
+            # 🎯 核心修正：既然資料夾已經分得那麼精準，裡面所有的照片都是該設施的！
+            # 直接取消任何檔名過濾條件，把資料夾內不論叫什麼名字的相片通通放行！
+            img_list = all_files
             img_list = sorted(list(set(img_list)))
+        else:
+            # 備用防呆機制：如果真的連「XX系統」資料夾都沒有，才回到溪流大資料夾下做傳統前綴搜尋
+            if os.path.exists(basin_dir) and os.path.isdir(basin_dir):
+                valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
+                all_files = []
+                for ext in valid_extensions:
+                    search_pattern = os.path.join(basin_dir, "**", f"*.{ext}")
+                    all_files.extend(glob.glob(search_pattern, recursive=True))
+                
+                pure_id_upper = pure_id.upper()
+                for file_path in all_files:
+                    file_name = os.path.basename(file_path).upper()
+                    if file_name.startswith(pure_id_upper):
+                        remainder = file_name[len(pure_id_upper):]
+                        if remainder == "" or not remainder[0].isalnum():
+                            img_list.append(file_path)
+                img_list = sorted(list(set(img_list)))
         else:
             # 備用防呆機制：如果找不到「XX系統」資料夾，才回到原本的舊路徑前綴搜尋
             if os.path.exists(basin_dir) and os.path.isdir(basin_dir):
