@@ -99,7 +99,7 @@ def load_shp_layer(shp_path, is_basin=False):
 
 # --- 3. 讀取路徑設定 ---
 FILE_PATH = "109到114年度 五股已完工設施盤點.xlsx"
-PHOTO_BASE_DIR = os.path.join(".", "現勘照片/2026_4~5月/觀音坑溪")
+PHOTO_BASE_DIR = os.path.join(".", "現勘照片/2026_4~5月/觀音山系")
 SHP_BASIN_PATH = "SHP檔/觀音山系/觀音山系集水區分區.shp"
 SHP_PIPE_PATH = "SHP檔/觀音山系/觀音山系管路.shp"
 
