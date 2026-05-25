@@ -154,7 +154,7 @@ else:
     df_filtered = df_step1[df_step1['_filter_w_series'] == selected_w].copy().reset_index(drop=True)
 
 # --- 5. 主畫面：空間地圖呈現 ---
-st.title(f"🗺️ 五股設施維護管理系統")
+st.title(f"🗺️ 五股已完工設施管理系統")
 st.subheader(f"當前範圍：{selected_basin} > {selected_w}")
 
 # 建立控制列：讓底圖樣式與開關並排呈現
