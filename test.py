@@ -12,7 +12,7 @@ import folium
 from streamlit_folium import st_folium
 
 # --- 1. 網頁基本設定 ---
-st.set_page_config(layout="wide", page_title="五股設施維護管理系統")
+st.set_page_config(layout="wide", page_title="五股已完工設施管理系統")
 
 # --- 2. 座標轉換器 (TWD97 -> WGS84) ---
 transformer = Transformer.from_crs("epsg:3826", "epsg:4326", always_xy=True)
@@ -99,9 +99,9 @@ def load_shp_layer(shp_path, is_basin=False):
 
 # --- 3. 讀取路徑設定 ---
 FILE_PATH = "109到114年度 五股已完工設施盤點.xlsx"
-PHOTO_BASE_DIR = os.path.join(".", "現勘照片/2026_4~5月")
-SHP_BASIN_PATH = "觀音山系集水區分區.shp"
-SHP_PIPE_PATH = "觀音山系管路.shp"
+PHOTO_BASE_DIR = os.path.join(".", "現勘照片/2026_4~5月/觀音山系")
+SHP_BASIN_PATH = "SHP檔/觀音山系/觀音山系集水區分區.shp"
+SHP_PIPE_PATH = "SHP檔/觀音山系/觀音山系管路.shp"
 
 try:
     df_all = load_data(FILE_PATH)
@@ -154,7 +154,7 @@ else:
     df_filtered = df_step1[df_step1['_filter_w_series'] == selected_w].copy().reset_index(drop=True)
 
 # --- 5. 主畫面：空間地圖呈現 ---
-st.title(f"🗺️ 五股設施維護管理系統")
+st.title(f"🗺️ 五股已完工設施管理系統")
 st.subheader(f"當前範圍：{selected_basin} > {selected_w}")
 
 # 建立控制列：讓底圖樣式與開關並排呈現
@@ -163,7 +163,6 @@ with control_col1:
     map_style_choice = st.radio("選擇底圖樣式：", ["電子通用地圖", "正射影像圖"], horizontal=True)
 with control_col2:
     show_basin_shp = st.checkbox("顯示集水區分區範圍", value=True, help="取消勾選即可隱藏地圖上的集水區顏色圖塊")
-    # 🌟 移至此處：將字體縮小（0.9rem）並調整為深灰色，放置在 Checkbox 的正下方
     st.markdown(
         '<div style="color: #999; font-size: 0.9rem; margin-top: -5px; font-weight: 500;">'
         '💡 提示：點選地圖上設施，下方圖文及相關資訊會對應跳出。'
@@ -303,8 +302,6 @@ for col in table_df.columns:
 
 table_df = table_df.fillna("")
 
-# 🌟 此處原本的大提示文字已經安全移除，版面回歸乾淨乾爽！
-
 st.markdown("""
     <style>
         .stDataFrame div[data-testid="stTable"] td, 
@@ -335,53 +332,6 @@ with main_col_left:
     if len(active_rows) > 0:
         st.session_state["last_selected_index"] = active_rows[0]
 
-    if st.session_state["last_selected_index"] is not None and st.session_state["last_selected_index"] < len(df_filtered):
-        idx = st.session_state["last_selected_index"]
-        target_row = df_filtered.iloc[idx]
-        
-        
-        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-        st.markdown("### 📊 內部統計與備註")
-        
-        n2_col1, n2_col2 = st.columns(2)
-        with n2_col1:
-            raw_sub_pipe = target_row.get('分接管(內部統計)', '')
-            sub_pipe_val = "—" if pd.isna(raw_sub_pipe) or str(raw_sub_pipe).strip() == "" or str(raw_sub_pipe).strip() == "無資料" else str(raw_sub_pipe)
-            st.markdown(f"""
-                <div style="padding: 5px 0;">
-                    <span style="color: #888; font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 8px;">📊 分接管數 (內部統計)：</span>
-                    <div style="font-size: 1.25rem; font-weight: bold; color: #333; background-color: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 4px solid #2e7d32; min-height: 48px; line-height: 28px;">
-                        {sub_pipe_val}
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        with n2_col2:
-            raw_note = target_row.get('備註', '')
-            note_val = "—" if pd.isna(raw_note) or str(raw_note).strip() == "" or str(raw_note).strip() == "無備註資訊" else str(raw_note)
-            st.markdown(f"""
-                <div style="padding: 5px 0;">
-                    <span style="color: #888; font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 8px;">📝 管理備註說明：</span>
-                    <div style="font-size: 1.25rem; font-weight: 500; color: #333; background-color: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 4px solid #757575; min-height: 48px; line-height: 28px;">
-                        {note_val}
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        st.divider()
-        st.markdown("### 🔄 現況與可優化方向")
-        n3_col, n4_col = st.columns(2)
-        with n3_col:
-            st.error("⚠️ 現況樣態說明")
-            raw_status = target_row.get('現況樣態', '現場狀態正常或暫無登錄缺失')
-            status_val = "現場狀態正常或暫無登錄缺失" if pd.isna(raw_status) or raw_status == "" else str(raw_status)
-            st.write(status_val)
-        with n4_col:
-            st.success("💡 可優化改善方向")
-            raw_optimize = target_row.get('可優化方向', '暫無優化建議')
-            optimize_val = "暫無優化建議" if pd.isna(raw_optimize) or raw_optimize == "" else str(raw_optimize)
-            st.write(optimize_val)
-
 # === 【右側主欄位】 ===
 with main_col_right:
     st.subheader("📸 設施現勘照片")
@@ -401,18 +351,46 @@ with main_col_right:
             </div>
         """, unsafe_allow_html=True)
         
-        basin_dir = os.path.join(PHOTO_BASE_DIR, "觀音山系", facility_basin)
+        # 1. 取得目前選取設施的「最終實體資料夾名稱」
+        pure_id = facility_id
+        if "(" in facility_id and ")" in facility_id:
+            pure_id = facility_id.split("(")[-1].split(")")[0]
+        pure_id = pure_id.strip()
+
+        # 2. 🎯 核心聯動
+        associated_w = str(target_row['_filter_w_series']).strip()
+        system_folder_name = f"{associated_w}系統"
+        
+        # 3. 三層絕對路徑無痕對接
+        basin_dir = os.path.join(PHOTO_BASE_DIR, facility_basin)
+        target_folder_path = os.path.join(basin_dir, system_folder_name, pure_id)
+        
         img_list = []
-        if os.path.exists(basin_dir) and os.path.isdir(basin_dir):
+        if os.path.exists(target_folder_path) and os.path.isdir(target_folder_path):
             valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
             all_files = []
             for ext in valid_extensions:
-                search_pattern = os.path.join(basin_dir, "**", f"*.{ext}")
+                search_pattern = os.path.join(target_folder_path, "**", f"*.{ext}")
                 all_files.extend(glob.glob(search_pattern, recursive=True))
-            for file_path in all_files:
-                if facility_id.upper() in file_path.upper():
-                    img_list.append(file_path)
+            img_list = all_files
             img_list = sorted(list(set(img_list)))
+            
+        else:
+            if os.path.exists(basin_dir) and os.path.isdir(basin_dir):
+                valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
+                all_files = []
+                for ext in valid_extensions:
+                    search_pattern = os.path.join(basin_dir, "**", f"*.{ext}")
+                    all_files.extend(glob.glob(search_pattern, recursive=True))
+                
+                pure_id_upper = pure_id.upper()
+                for file_path in all_files:
+                    file_name = os.path.basename(file_path).upper()
+                    if file_name.startswith(pure_id_upper):
+                        remainder = file_name[len(pure_id_upper):]
+                        if remainder == "" or not remainder[0].isalnum():
+                            img_list.append(file_path)
+                img_list = sorted(list(set(img_list)))
 
         if "remote_action" not in st.session_state:
             st.session_state["remote_action"] = None
@@ -553,10 +531,98 @@ with main_col_right:
                 st.components.v1.html(panzoom_html, height=435)
             except Exception as img_err: st.error(f"圖片加載失敗: {img_err}")
         else:
-            st.info(f"💡 在 `{facility_basin}` 的各層子資料夾內，目前找不到任何路徑或檔名包含 `{facility_id}` 的照片。")
+            st.info(f"💡 在硬碟中找不到該設施的指定目標子資料夾：`/{facility_basin}/{system_folder_name}/{pure_id}/`")
     else:
         st.markdown(
             "<div style='border: 2px dashed #ccc; padding: 40px; text-align: center; color: #888; border-radius: 10px; margin-top: 20px;'>"
             "<h3>📋 尚未選取設施</h3><p>請在上方地圖點選圖標，或是點選左側表格列，系統將在此即時生成專屬詳細報告圖面。</p>"
             "</div>", unsafe_allow_html=True
         )
+
+# =========================================================================
+# 🌟 滿版詳細資料區（移至 5:5 欄位最下方，並自動處理多點缺失換行一對一排開）
+# =========================================================================
+if st.session_state["last_selected_index"] is not None and st.session_state["last_selected_index"] < len(df_filtered):
+    idx = st.session_state["last_selected_index"]
+    target_row = df_filtered.iloc[idx]
+    
+    st.markdown("---") # 加上視覺分隔線
+    
+    # 1. 內部統計與備註欄位
+    st.markdown("### 📊 內部統計與備註")
+    n2_col1, n2_col2 = st.columns(2)
+    with n2_col1:
+        raw_sub_pipe = target_row.get('分接管(內部統計)', '')
+        sub_pipe_val = "—" if pd.isna(raw_sub_pipe) or str(raw_sub_pipe).strip() == "" or str(raw_sub_pipe).strip() == "無資料" else str(raw_sub_pipe)
+        st.markdown(f"""
+            <div style="padding: 5px 0;">
+                <span style="color: #888; font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 8px;">📊 分接管數 (內部統計)：</span>
+                <div style="font-size: 1.25rem; font-weight: bold; color: #333; background-color: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 4px solid #2e7d32; min-height: 48px; line-height: 28px;">
+                    {sub_pipe_val}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with n2_col2:
+        raw_note = target_row.get('備註', '')
+        note_val = "—" if pd.isna(raw_note) or str(raw_note).strip() == "" or str(raw_note).strip() == "無備註資訊" else str(raw_note)
+        st.markdown(f"""
+            <div style="padding: 5px 0;">
+                <span style="color: #888; font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 8px;">📝 管理備註說明：</span>
+                <div style="font-size: 1.25rem; font-weight: 500; color: #333; background-color: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 4px solid #757575; min-height: 48px; line-height: 28px;">
+                    {note_val}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    
+    # 2. 🔄 核心排版優化：現況樣態說明 與 可優化改善方向
+    st.markdown("### 🔄 現況與可優化方向")
+    
+    # 抓取原始字串並清理過濾
+    raw_status = target_row.get('現況樣態', '')
+    raw_optimize = target_row.get('可優化方向', '')
+    
+    status_str = "現場狀態正常或暫無登錄缺失" if pd.isna(raw_status) or str(raw_status).strip() == "" else str(raw_status).strip()
+    optimize_str = "暫無優化建議" if pd.isna(raw_optimize) or str(raw_optimize).strip() == "" else str(raw_optimize).strip()
+    
+    # 核心切割技術：根據換行符號 \n 切割成獨立的點位清單
+    status_lines = [line.strip() for line in status_str.split('\n') if line.strip()]
+    optimize_lines = [line.strip() for line in optimize_str.split('\n') if line.strip()]
+    
+    # 計算最大行數，確保兩邊能「一對一」成雙成對往下排
+    max_lines = max(len(status_lines), len(optimize_lines))
+    
+    # 先渲染上方大標題（模擬你的 error/success 紅綠區塊效果）
+    title_col1, title_col2 = st.columns(2)
+    with title_col1:
+        st.error("⚠️ 現況樣態說明")
+    with title_col2:
+        st.success("💡 可優化改善方向")
+        
+    # 用迴圈一筆一筆排出來，只要有第 2 點，就絕對會自己「往下開新行」排列
+    for i in range(max_lines):
+        s_text = status_lines[i] if i < len(status_lines) else ""
+        o_text = optimize_lines[i] if i < len(optimize_lines) else ""
+        
+        row_col1, row_col2 = st.columns(2)
+        with row_col1:
+            if s_text:
+                st.markdown(f"""
+                    <div style="background-color: #ffebee; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #ef5350; font-size: 1.1rem; color: #c62828; min-height: 50px;">
+                        {s_text}
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.write("") # 空白占位保持平行
+                
+        with row_col2:
+            if o_text:
+                st.markdown(f"""
+                    <div style="background-color: #e8f5e9; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #66bb6a; font-size: 1.1rem; color: #2e7d32; min-height: 50px;">
+                        {o_text}
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.write("") # 空白占位保持平行
