@@ -332,52 +332,6 @@ with main_col_left:
     if len(active_rows) > 0:
         st.session_state["last_selected_index"] = active_rows[0]
 
-    if st.session_state["last_selected_index"] is not None and st.session_state["last_selected_index"] < len(df_filtered):
-        idx = st.session_state["last_selected_index"]
-        target_row = df_filtered.iloc[idx]
-        
-        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-        st.markdown("### 📊 內部統計與備註")
-        
-        n2_col1, n2_col2 = st.columns(2)
-        with n2_col1:
-            raw_sub_pipe = target_row.get('分接管(內部統計)', '')
-            sub_pipe_val = "—" if pd.isna(raw_sub_pipe) or str(raw_sub_pipe).strip() == "" or str(raw_sub_pipe).strip() == "無資料" else str(raw_sub_pipe)
-            st.markdown(f"""
-                <div style="padding: 5px 0;">
-                    <span style="color: #888; font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 8px;">📊 分接管數 (內部統計)：</span>
-                    <div style="font-size: 1.25rem; font-weight: bold; color: #333; background-color: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 4px solid #2e7d32; min-height: 48px; line-height: 28px;">
-                        {sub_pipe_val}
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        with n2_col2:
-            raw_note = target_row.get('備註', '')
-            note_val = "—" if pd.isna(raw_note) or str(raw_note).strip() == "" or str(raw_note).strip() == "無備註資訊" else str(raw_note)
-            st.markdown(f"""
-                <div style="padding: 5px 0;">
-                    <span style="color: #888; font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 8px;">📝 管理備註說明：</span>
-                    <div style="font-size: 1.25rem; font-weight: 500; color: #333; background-color: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 4px solid #757575; min-height: 48px; line-height: 28px;">
-                        {note_val}
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        st.divider()
-        st.markdown("### 🔄 現況與可優化方向")
-        n3_col, n4_col = st.columns(2)
-        with n3_col:
-            st.error("⚠️ 現況樣態說明")
-            raw_status = target_row.get('現況樣態', '現場狀態正常或暫無登錄缺失')
-            status_val = "現場狀態正常或暫無登錄缺失" if pd.isna(raw_status) or raw_status == "" else str(raw_status)
-            st.write(status_val)
-        with n4_col:
-            st.success("💡 可優化改善方向")
-            raw_optimize = target_row.get('可優化方向', '暫無優化建議')
-            optimize_val = "暫無優化建議" if pd.isna(raw_optimize) or raw_optimize == "" else str(raw_optimize)
-            st.write(optimize_val)
-
 # === 【右側主欄位】 ===
 with main_col_right:
     st.subheader("📸 設施現勘照片")
@@ -398,14 +352,12 @@ with main_col_right:
         """, unsafe_allow_html=True)
         
         # 1. 取得目前選取設施的「最終實體資料夾名稱」（如 崩W1、崩B1-1、崩1-2）
-        # 自動清掉可能帶有的中文括號（如 分分水箱(崩B1-1) -> 還原為純編號 崩B1-1）
         pure_id = facility_id
         if "(" in facility_id and ")" in facility_id:
             pure_id = facility_id.split("(")[-1].split(")")[0]
         pure_id = pure_id.strip()
 
-        # 2. 🎯 核心聯動：找出此點位對應的主取水設施（W系列系列名稱）作為系統主目錄
-        # 這樣不論點到 W、B 還是純數字，都能精準鎖定到同一個大「XX系統」資料夾下
+        # 2. 🎯 核心聯動：找出此點位對應的主取水設施名稱作為系統主目錄
         associated_w = str(target_row['_filter_w_series']).strip()
         system_folder_name = f"{associated_w}系統"
         
@@ -414,7 +366,7 @@ with main_col_right:
         target_folder_path = os.path.join(basin_dir, system_folder_name, pure_id)
         
         img_list = []
-        # 4. 如果專屬路徑存在，無條件打包該設施資料夾下的每一張照片（零命名限制）
+        # 4. 如果專屬路徑存在，打包照片
         if os.path.exists(target_folder_path) and os.path.isdir(target_folder_path):
             valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
             all_files = []
@@ -425,7 +377,6 @@ with main_col_right:
             img_list = sorted(list(set(img_list)))
             
         else:
-            # 備用防呆機制：如果硬碟裡沒有拆分得這麼細，自動回到大資料夾做安全前綴搜尋
             if os.path.exists(basin_dir) and os.path.isdir(basin_dir):
                 valid_extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"]
                 all_files = []
@@ -588,3 +539,55 @@ with main_col_right:
             "<h3>📋 尚未選取設施</h3><p>請在上方地圖點選圖標，或是點選左側表格列，系統將在此即時生成專屬詳細報告圖面。</p>"
             "</div>", unsafe_allow_html=True
         )
+
+# =========================================================================
+# 🌟 關鍵修改：將詳細資料區塊移出 columns，放置於 5:5 欄位最下方形成滿版區塊
+# =========================================================================
+if st.session_state["last_selected_index"] is not None and st.session_state["last_selected_index"] < len(df_filtered):
+    idx = st.session_state["last_selected_index"]
+    target_row = df_filtered.iloc[idx]
+    
+    st.markdown("---") # 加上視覺分隔線
+    
+    # 1. 移至最下方的：內部統計與備註
+    st.markdown("### 📊 內部統計與備註")
+    n2_col1, n2_col2 = st.columns(2)
+    with n2_col1:
+        raw_sub_pipe = target_row.get('分接管(內部統計)', '')
+        sub_pipe_val = "—" if pd.isna(raw_sub_pipe) or str(raw_sub_pipe).strip() == "" or str(raw_sub_pipe).strip() == "無資料" else str(raw_sub_pipe)
+        st.markdown(f"""
+            <div style="padding: 5px 0;">
+                <span style="color: #888; font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 8px;">📊 分接管數 (內部統計)：</span>
+                <div style="font-size: 1.25rem; font-weight: bold; color: #333; background-color: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 4px solid #2e7d32; min-height: 48px; line-height: 28px;">
+                    {sub_pipe_val}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with n2_col2:
+        raw_note = target_row.get('備註', '')
+        note_val = "—" if pd.isna(raw_note) or str(raw_note).strip() == "" or str(raw_note).strip() == "無備註資訊" else str(raw_note)
+        st.markdown(f"""
+            <div style="padding: 5px 0;">
+                <span style="color: #888; font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 8px;">📝 管理備註說明：</span>
+                <div style="font-size: 1.25rem; font-weight: 500; color: #333; background-color: #f9f9f9; padding: 10px; border-radius: 5px; border-left: 4px solid #757575; min-height: 48px; line-height: 28px;">
+                    {note_val}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+    
+    # 2. 移至最下方的：現況樣態說明 與 可優化改善方向
+    st.markdown("### 🔄 現況與可優化方向")
+    n3_col, n4_col = st.columns(2)
+    with n3_col:
+        st.error("⚠️ 現況樣態說明")
+        raw_status = target_row.get('現況樣態', '現場狀態正常或暫無登錄缺失')
+        status_val = "現場狀態正常或暫無登錄缺失" if pd.isna(raw_status) or raw_status == "" else str(raw_status)
+        st.write(status_val)
+    with n4_col:
+        st.success("💡 可優化改善方向")
+        raw_optimize = target_row.get('可優化方向', '暫無優化建議')
+        optimize_val = "暫無優化建議" if pd.isna(raw_optimize) or raw_optimize == "" else str(raw_optimize)
+        st.write(optimize_val)
