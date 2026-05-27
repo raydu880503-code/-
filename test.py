@@ -17,7 +17,7 @@ st.set_page_config(layout="wide", page_title="五股已完工設施管理系統"
 # --- 2. 座標轉換器 (TWD97 -> WGS84) ---
 transformer = Transformer.from_crs("epsg:3826", "epsg:4326", always_xy=True)
 
-@st.cache_data
+@st.cache_data(ttl=10)
 def load_data(file_path):
     xls = pd.ExcelFile(file_path)
     df = pd.read_excel(xls, '總表')
